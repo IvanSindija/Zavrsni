@@ -12,31 +12,36 @@ namespace AnalizatorMreznogPrometa
     {
         static void Main(string[] args)
         {
-            int maxArraySize = 4000;
+            int maxArraySize = 1 << 12;
             bool speedTest = false;
-            LinkedList<PodatciOGreskama> analizaBlooma = new LinkedList<PodatciOGreskama>();
-            LinkedList<LinkedList<string>> sve = new LinkedList<LinkedList<string>>();
-            ILoader loaderMreznogPrometa = new TvzCSVLoader("/promet_veci_sa_bloom_log02032016.csv",1500);
+            int brojIntervala = 60;
+            LinkedList<LinkedList<Int32>> sveKolicinePodataka = new LinkedList<LinkedList<Int32>>();
+            LinkedList<LinkedList<Int32>> sveGreske = new LinkedList<LinkedList<Int32>>();
+            LinkedList<LinkedList<string>> svePopunjenostiFiltera = new LinkedList<LinkedList<string>>();
+
+            LinkedList<string> xTime = new LinkedList<string>();
+            bool timeUzeto = false;
+            ILoader loaderMreznogPrometa = new TvzCSVLoader("/promet_veci_sa_bloom_log02032016.csv",120000);
             LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa.Load(new string[] { "ACK(SYN)", "ACK(FIN(DOLJE))", "ACK(FIN(GORE))", "ACK(PUSH_GORE)", "ACK(PUSH_DOLJE)", "SYN-ACK" });
-//            ILoader loaderMreznogPrometa = new CsvLoader("/promet_veci_sa_bloom_log02032016.csv");
-//            LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa.Load(new string[] { "ACK(SYN)","SYN-ACK" });
+            //ILoader loaderMreznogPrometa = new CsvLoader("/promet.csv");
+          //  LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa.Load(new string[] { "ACK(SYN)", "SYN-ACK" });
 
             Console.WriteLine("Kolicina prometa =" + cjelokupanPromet.Count);
-            int VelicinaPoljaZaDodatneTestove = 3000;
+            int VelicinaPoljaZaDodatneTestove = 1 << 10;
             using (System.IO.StreamWriter file = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/cSharpMurmurGreske.csv"))
             {
                 for (int numHashes = 1; numHashes < 8; numHashes++)
                 {
                     LinkedList<double> brojGresaka = new LinkedList<double>();
                     Console.WriteLine("Broj Hash funkcija" + numHashes);
-                    for (int arraySize = 1; arraySize <= maxArraySize; arraySize +=200)
+                    for (int arraySize = 1; arraySize <= maxArraySize; arraySize += 128)
                     {
                         LinkedList<string> popunjenostFiltera = new LinkedList<string>();
                         Console.WriteLine("prolaz za velicinu" + arraySize);
                         LinkedList<PrometData> dodanoUBloomFilter = new LinkedList<PrometData>();
                         LinkedList<PrometData> falsePromet = new LinkedList<PrometData>();
-                        LinkedList<Greske> falsePositive = new LinkedList<Greske>();
                         LinkedList<int> kolicinaCalnova = new LinkedList<int>();
+                        LinkedList<Int32> kolicinaGresaka = new LinkedList<Int32>();
 
                         Stopwatch stoperica = new Stopwatch();
                         CountingBloomFilter<string> bloomFilter = new CountingBloomFilter<string>(arraySize, numHashes);
@@ -44,7 +49,6 @@ namespace AnalizatorMreznogPrometa
                         {
                             stoperica.Start();
                         }
-                        //LinkedList<string> popunjenostFiltera =new LinkedList<string>()
                         #region obrada prometa
                         foreach (PrometData zahtjev in cjelokupanPromet)
                         {
@@ -57,7 +61,6 @@ namespace AnalizatorMreznogPrometa
                                 }
                                 string x = zahtjev.SourceIP + zahtjev.DestinationIP + zahtjev.SourcePort + zahtjev.DestinationPort
                                     + zahtjev.SEQ + zahtjev.ASEQ;
-                                // Console.WriteLine("Dodano: "+x);
                                 bloomFilter.Add(x);
                             }
                             else
@@ -92,30 +95,10 @@ namespace AnalizatorMreznogPrometa
                                     if (!sadrzanoUListiZaProvjeru)
                                     {
                                         falsePromet.AddLast(zahtjev);
-                                        if (arraySize == VelicinaPoljaZaDodatneTestove)
-                                        {
-                                            int fpDosada = falsePositive.Count == 0 ? 0 : falsePositive.Last().UkupnoGresaka;
-                                            falsePositive.AddLast(new Greske()
-                                            {
-                                                UkupnoGresaka = fpDosada+1,
-                                                PovecanjeKolicineGresaka = 1
-                                            });
-                                        }
-                                        //Console.WriteLine("Nije bio sadrzan u listi za provjeru" + x);
                                     }
                                     else
                                     {
                                         dodanoUBloomFilter.Remove(odgovarajuciZahtjevIzListe);
-                                        if (arraySize == VelicinaPoljaZaDodatneTestove)
-                                        {
-
-                                            int fpDosada = falsePositive.Count == 0 ? 0 : falsePositive.Last().UkupnoGresaka;
-                                            falsePositive.AddLast(new Greske()
-                                            {
-                                                UkupnoGresaka = fpDosada,
-                                                PovecanjeKolicineGresaka = 0
-                                            });
-                                        }
                                     }
                                 }
                                 else
@@ -123,31 +106,8 @@ namespace AnalizatorMreznogPrometa
                                     if (sadrzanoUListiZaProvjeru)
                                     {
                                         falsePromet.AddLast(zahtjev);
-                                        if (arraySize == VelicinaPoljaZaDodatneTestove)
-                                        {
-                                            int fpDosada = falsePositive.Count == 0 ? 0 : falsePositive.Last().UkupnoGresaka;
-                                            falsePositive.AddLast(new Greske()
-                                            {
-                                                UkupnoGresaka = fpDosada+1,
-                                                PovecanjeKolicineGresaka = 1
-                                            });
-                                        }
-
-                                        //Console.WriteLine("Bio je sadrzan u listi za provjeru a bloom je rekao da nije" + x);
                                         dodanoUBloomFilter.Remove(odgovarajuciZahtjevIzListe);
 
-                                    }
-                                    else
-                                    {
-                                        if (arraySize == VelicinaPoljaZaDodatneTestove)
-                                        {
-                                            int fpDosada = falsePositive.Count == 0 ? 0 : falsePositive.Last().UkupnoGresaka;
-                                            falsePositive.AddLast(new Greske()
-                                            {
-                                                UkupnoGresaka = fpDosada,
-                                                PovecanjeKolicineGresaka = 0
-                                            });
-                                        }
                                     }
                                 }
                                 #endregion
@@ -155,9 +115,13 @@ namespace AnalizatorMreznogPrometa
 
                             if (arraySize == VelicinaPoljaZaDodatneTestove)
                             {
-                                //Console.WriteLine("ajmo" + bloomFilter.GetPopunjenost());
-                             //   popunjenostFiltera.AddLast(bloomFilter.GetPopunjenost());
+                                if (!timeUzeto)
+                                {
+                                    xTime.AddLast(zahtjev.Time);
+                                }
+                                popunjenostFiltera.AddLast(bloomFilter.GetPopunjenost());
                                 kolicinaCalnova.AddLast(bloomFilter.BrojClanova);
+                                kolicinaGresaka.AddLast(falsePromet.Count());
                             }
                         }
                         #endregion
@@ -172,25 +136,17 @@ namespace AnalizatorMreznogPrometa
                         {
                             NumberFormatInfo nfi = new NumberFormatInfo();
                             nfi.NumberDecimalSeparator = ".";
-                            brojGresaka.AddLast(((double)falsePromet.Count)/loaderMreznogPrometa.KolicinaTestnogPrometa);
-                            if (falsePositive.Count > 0  || kolicinaCalnova.Count > 0)
-                            {
-                                analizaBlooma.AddLast(new PodatciOGreskama()
-                                {
-                                    brojClanova = kolicinaCalnova,
-                                    falsePositiveGreske = falsePositive
-                                });
-                            }
+                            brojGresaka.AddLast(((double)falsePromet.Count) / loaderMreznogPrometa.KolicinaTestnogPrometa);
 
-                            if (popunjenostFiltera.Count > 0)
+                            if (kolicinaCalnova.Count > 0)
                             {
-                                sve.AddLast(popunjenostFiltera);
-                                //Console.WriteLine("popunjenost" + numHashes);
+                                timeUzeto = true;
+                                sveKolicinePodataka.AddLast(kolicinaCalnova);
+                                sveGreske.AddLast(kolicinaGresaka);
                             }
-
-                            //Console.WriteLine("Broj gresaka =" + falsePositivePromet.Count);
                         }
-                        if (arraySize == 1) {
+                        if (arraySize == 1)
+                        {
                             arraySize = 0;
                         }
                     }
@@ -199,7 +155,7 @@ namespace AnalizatorMreznogPrometa
                     {
                         if (i == (brojGresaka.Count - 1))
                         {
-                            greskeString += (brojGresaka.Skip(i).First().ToString()).Replace(",",".");
+                            greskeString += (brojGresaka.Skip(i).First().ToString()).Replace(",", ".");
                             break;
                         }
                         greskeString += (brojGresaka.Skip(i).First().ToString()).Replace(",", ".") + ",";
@@ -208,113 +164,165 @@ namespace AnalizatorMreznogPrometa
                     Console.WriteLine("greske:" + greskeString);
                 }
             }
+
             int j = 0;
-            foreach (var x in sve)
+            foreach (var popunjenostK in svePopunjenostiFiltera)
             {
                 j++;
                 Console.WriteLine("cSharpPopunjenostFiltera_K_" + j);
                 using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/cSharpPopunjenostFiltera_K_" + j + ".csv"))
                 {
-                    foreach (string line in x)
+                    foreach (string lineTakta in popunjenostK)
                     {
                         //Console.WriteLine(line);
-                        pisac.WriteLine(line);
+                        pisac.WriteLine(lineTakta);
                     }
                 }
             }
-
-            j = 0;
-
-            //using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/cSFalseNegative.csv"))
-            //{
-            //    foreach (PodatciOGreskama pog in analizaBlooma)
-            //    {
-            //        string ispis = "";
-            //        for (int t = 0; t < pog.falsenegativeGreske.Count; t++)
-            //        {
-            //            if (t == pog.falsePositiveGreske.Count - 1)
-            //            {
-            //                ispis += pog.falsenegativeGreske.ElementAt(t).PovecanjeKolicineGresaka;
-            //            }
-            //            else
-            //            {
-            //                ispis += pog.falsenegativeGreske.ElementAt(t).PovecanjeKolicineGresaka +",";
-            //            }
-            //        }
-            //        pisac.WriteLine(ispis);
-            //    }
-            //}
-            Console.WriteLine("cSFalsePositiveDerivacija");
-            using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/cSFalsePositiveDerivacija.csv"))
-            {
-                foreach (PodatciOGreskama pog in analizaBlooma)
-                {
-                    string ispis = "";
-                    for (int t= 0;t < pog.falsePositiveGreske.Count;t++)
-                    {
-                        if (t==pog.falsePositiveGreske.Count-1)
-                        {
-                            ispis += pog.falsePositiveGreske.ElementAt(t).PovecanjeKolicineGresaka;
-                        }
-                        else
-                        {
-                            ispis += pog.falsePositiveGreske.ElementAt(t).PovecanjeKolicineGresaka + ",";
-                        }
-                    }
-                    pisac.WriteLine(ispis);
-                }
-            }
-            Console.WriteLine("cSFalsePositiveUkupno");
-            using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/cSFalsePositiveUkupno.csv"))
-            {
-                foreach (PodatciOGreskama pog in analizaBlooma)
-                {
-                    string ispis = "";
-                    for (int t = 0; t < pog.falsePositiveGreske.Count; t++)
-                    {
-                        if (t == pog.falsePositiveGreske.Count - 1)
-                        {
-                            ispis += pog.falsePositiveGreske.ElementAt(t).UkupnoGresaka;
-                        }
-                        else
-                        {
-                            ispis += pog.falsePositiveGreske.ElementAt(t).UkupnoGresaka + ",";
-                        }
-                    }
-                    pisac.WriteLine(ispis);
-                }
-            }
+            
             Console.WriteLine("cSBrojClanova");
             using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/cSBrojClanova.csv"))
             {
-                foreach (PodatciOGreskama pog in analizaBlooma)
+                foreach (var kolicinaK in sveKolicinePodataka)
                 {
 
                     string ispis = "";
-                    for (int i = 0; i < pog.brojClanova.Count; i++) {
-                        if (i == pog.brojClanova.Count - 1) {
-                            ispis += pog.brojClanova.ElementAt(i);
+                    for (int i = 0; i < kolicinaK.Count; i++)
+                    {
+                        if (i == kolicinaK.Count - 1)
+                        {
+                            ispis += kolicinaK.ElementAt(i);
                         }
                         else
                         {
-                            ispis += pog.brojClanova.ElementAt(i)+",";
+                            ispis += kolicinaK.ElementAt(i) + ",";
                         }
                     }
-                    //foreach (int line in pog.brojClanova)
-                    //{
-                    //    if (pog.brojClanova.Last.Equals(line))
-                    //    {
-                    //        ispis += line;
-                    //    }
-                    //    else
-                    //    {
-                    //        ispis += line + ",";
-                    //    }
-                    //}
                     pisac.WriteLine(ispis);
                 }
             }
-        }
 
+            Console.WriteLine("sve greske");
+            using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/greskeMurMur.csv"))
+            {
+                foreach (var greskeK in sveGreske)
+                {
+                    string ispis = "";
+                    for (int i = 0; i < greskeK.Count; i++)
+                    {
+                        if (i == greskeK.Count - 1)
+                        {
+                            ispis += greskeK.ElementAt(i);
+                        }
+                        else
+                        {
+                            ispis += greskeK.ElementAt(i) + ",";
+                        }
+
+                    }
+                    pisac.WriteLine(ispis);
+                }
+            }
+            //using (var outfile = new StreamWriter(myRemoteFilePath, false, Encoding.ASCII, 0x10000))
+            //brže pisanje
+            Console.WriteLine("sve murmurVrijeme");
+            LinkedList<Int64> microsecondsTime = new LinkedList<Int64>();
+
+            using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/murmurVrijeme.csv"))
+            {
+                string ispis = "";
+                for (int i = 0; i < xTime.Count; i++)
+                {            
+                    String[] timeRazdjeljeno = xTime.ElementAt(i).Split(':');
+                    Int64 timeStamp = Int64.Parse(timeRazdjeljeno[3]) + Int64.Parse(timeRazdjeljeno[2]) * 1000000 +
+                            Int64.Parse(timeRazdjeljeno[1]) * 100 + Int64.Parse(timeRazdjeljeno[0]) * 60;
+                    microsecondsTime.AddLast(timeStamp);
+
+                    if (i == xTime.Count - 1)
+                    {
+                        ispis += timeStamp.ToString();
+                    }
+                    else
+                    {
+                        ispis += timeStamp.ToString() + ",";
+                    }
+                }
+                pisac.WriteLine(ispis);
+            }
+            Console.WriteLine("Napravi vrijeme" + xTime.Count);
+            //nadi intervale gresaka
+            if (sveGreske.Count > 0)
+            {
+                LinkedList<Int32> intervali = new LinkedList<Int32>();
+                long korak = microsecondsTime.Last.Value / brojIntervala;
+                long trazimVrijednost = korak;
+                //trazim koji je zadnji indeks zahtjeva na kraju vremenskog intervala 
+                foreach (Int64 takt in microsecondsTime)
+                {
+                    if (takt >= trazimVrijednost)
+                    {
+                        intervali.AddLast(microsecondsTime.Select((item, inx) => new { item, inx }).First(x=>x.item==takt).inx);
+                        trazimVrijednost += korak;
+                    }
+                }
+                using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/murmurIntervaliGresaka.csv"))
+                {   
+                    int i = 0;
+                    foreach (LinkedList<Int32> greskeK in sveGreske)
+                    {
+                        String linija = "";
+                        i++;
+                        Console.WriteLine("Dodajem interval greske za K=" + i);
+                        for ( j = 0; j < intervali.Count; j++)
+                        {
+                            if (j == 0)
+                            {
+                                linija += greskeK.ElementAt(intervali.ElementAt(j)) + ",";
+                            }
+                            else if (j == intervali.Count - 1)
+                            {
+                                linija += (greskeK.ElementAt(intervali.ElementAt(j)) - greskeK.ElementAt(intervali.ElementAt(j - 1)));
+                            }
+                            else
+                            {
+                                linija += (greskeK.ElementAt(intervali.ElementAt(j)) - greskeK.ElementAt(intervali.ElementAt(j - 1))) + ",";
+                            }
+                        }
+                        pisac.WriteLine(linija);
+                    }
+                }
+                //postotci intervala
+                using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/murmurPostociIntervaliGresaka.csv"))
+                {
+                    int i = 0;
+                    foreach (LinkedList<Int32> greskeK in sveGreske)
+                    {
+                        String linija = "";
+                        i++;
+                        Console.WriteLine("Dodajem interval greske za K=" + i);
+
+                        for ( j = 0; j < intervali.Count; j++)
+                        {
+                            if (j == 0)
+                            {
+                                linija += ((double)greskeK.ElementAt(intervali.ElementAt(j)) / intervali.ElementAt(j)) + ",";
+                            }
+                            else if (j == intervali.Count - 1)
+                            {
+                                linija += ((double)(greskeK.ElementAt(intervali.ElementAt(j)) - greskeK.ElementAt(intervali.ElementAt(j - 1))) 
+                                    / (intervali.ElementAt(j) - intervali.ElementAt(j - 1)));
+                            }
+                            else
+                            {
+                                linija += ((double)(greskeK.ElementAt(intervali.ElementAt(j)) - greskeK.ElementAt(intervali.ElementAt(j - 1)))
+                                    / (intervali.ElementAt(j) - intervali.ElementAt(j - 1))) + ",";
+                            }
+                        }
+                        pisac.WriteLine(linija);
+                    }
+                } 
+            }
+
+        }
     }
 }

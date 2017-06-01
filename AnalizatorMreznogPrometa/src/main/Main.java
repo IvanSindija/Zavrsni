@@ -244,7 +244,7 @@ public class Main {
 			long korak = microsecondsTime.getLast()/podjelaNaDijelove;
 			long trazimVrijednost=korak;
 			System.out.println("korak"+korak);
-			//trzim koji je zadnji indeks zahtjeva na kraju vremenskog intervala 
+			//trazim koji je zadnji indeks zahtjeva na kraju vremenskog intervala 
 			for (Long takt : microsecondsTime) {
 				if(takt>=trazimVrijednost){
 					intervali.addLast(microsecondsTime.indexOf(takt));

@@ -8,7 +8,7 @@ namespace DataLoader
 {
     public class PrometData
     {
-        private string[] dopusteneVrste = { "SYN", "SYN-ACK" }; 
+        public string Time { get; set; } 
         private string localVsta;
         public string Vrsta {get;set;}
         public string SourceIP { get; set; }

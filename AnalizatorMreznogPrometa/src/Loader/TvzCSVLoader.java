@@ -61,33 +61,8 @@ public class TvzCSVLoader implements ILoader {
 					if(!linijaPrometa.Vrsta.equals("SYN-ACK")){
 						KolicinaTestnihPodataka++;
 					}
-					// if(validanPromet<n){
 					promet.addLast(linijaPrometa);
-					// validanPromet++;
-					// }
-					// }else if(linijaPrometa.Vrsta.equals("ACK(SYN)")){
-					// boolean pronaden = false;
-					// for (PrometData zahtjevIzListe : promet) {
-					/*
-					 * if (zahtjevIzListe.SourceIP
-					 * .equals(linijaPrometa.DestinationIP) &&
-					 * zahtjevIzListe.SourcePort
-					 * .equals(linijaPrometa.DestinationPort) &&
-					 * zahtjevIzListe.DestinationIP
-					 * .equals(linijaPrometa.SourceIP) &&
-					 * zahtjevIzListe.DestinationPort
-					 * .equals(linijaPrometa.SourcePort) && zahtjevIzListe.ASEQ
-					 * == Long .parseLong(linijaPrometa.SEQ) && Long
-					 * .parseLong(zahtjevIzListe.SEQ) == (linijaPrometa.ASEQ -
-					 * 1)) { pronaden=true; } } if(!pronaden){ //
-					 * System.out.println("Desilo se nesto lose !"+line); }
-					 * if(pronaden){ promet.addLast(linijaPrometa);
-					 * validanOdgovor++; } }else{ promet.addLast(linijaPrometa);
-					 * falsePromet++; } } if(validanOdgovor==n){
-					 * System.out.println("svi odgovori popunjeni sve OK");
-					 * break; }
-					 */
-					}
+										}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

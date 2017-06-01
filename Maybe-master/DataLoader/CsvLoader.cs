@@ -9,6 +9,7 @@ namespace DataLoader
 {
     public class CsvLoader : ILoader
     {
+        private int količinaPrometa;
         private string csvFileName;
         public CsvLoader(string fileName)
         {
@@ -20,12 +21,12 @@ namespace DataLoader
         {
             get
             {
-                throw new NotImplementedException();
+                return količinaPrometa;
             }
 
             set
             {
-                throw new NotImplementedException();
+                količinaPrometa = value;
             }
         }
 
@@ -35,14 +36,18 @@ namespace DataLoader
 
             using (StreamReader sr = new StreamReader(csvFileName))
             {
+                količinaPrometa = 0;
+                Int32 takt = 0;
                 while (!sr.EndOfStream)
                 {
                     string[] line = sr.ReadLine().Split(',');
 
                     if (olnyLoad.Contains(line[0]))
                     {
+                        takt++;
                         promet.AddLast(new PrometData()
                         {
+                            Time=takt.ToString(),
                             Vrsta = line[0],
                             SEQ = line[1],
                             ASEQ = Double.Parse(line[2]),
@@ -51,6 +56,10 @@ namespace DataLoader
                             SourcePort = line[4],
                             SourceIP = line[3]
                         });
+                        if (!line[0].Equals("SYN-ACK"))
+                        {
+                            količinaPrometa++;
+                        }
                     }
                 }
             }
