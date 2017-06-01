@@ -1,0 +1,6 @@
+C:\faks\zavrsni\bimpl\generator\GeneratorPrometa\bin\Debug\GeneratorPrometa.exe.config
+C:\faks\zavrsni\bimpl\generator\GeneratorPrometa\bin\Debug\GeneratorPrometa.exe
+C:\faks\zavrsni\bimpl\generator\GeneratorPrometa\bin\Debug\GeneratorPrometa.pdb
+C:\faks\zavrsni\bimpl\generator\GeneratorPrometa\obj\Debug\GeneratorPrometa.csprojResolveAssemblyReference.cache
+C:\faks\zavrsni\bimpl\generator\GeneratorPrometa\obj\Debug\GeneratorPrometa.exe
+C:\faks\zavrsni\bimpl\generator\GeneratorPrometa\obj\Debug\GeneratorPrometa.pdb

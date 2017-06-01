@@ -1,0 +1,280 @@
+package main;
+
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.LinkedList;
+
+import BloomFilter.CountBloomFilter;
+import Loader.CsvLoader;
+import Loader.ILoader;
+import Loader.PrometData;
+import Loader.TvzCSVLoader;
+
+public class Main {
+
+	public static void main(String[] args) {
+		int BrojNaKojemTestiramPopunjenost = 1<<11;
+		int podjelaNaDijelove=30;
+		int m = 100;// Integer.parseInt(args[0]);
+		int k = 4;// Integer.parseInt(args[2]);
+		LinkedList<LinkedList<Integer>> popunjenostFilteraZaSveK = new LinkedList<LinkedList<Integer>>();
+		LinkedList<LinkedList<Integer>> greskeFilteraZaSveK = new LinkedList<LinkedList<Integer>>();
+		LinkedList<String> xTime = new LinkedList<String>();
+		boolean timeUzeto=false;
+		//SL1
+		//ILoader loaderMreznogPrometa = new CsvLoader("/promet.csv");
+		//TVZ1
+		ILoader loaderMreznogPrometa = new TvzCSVLoader("/promet_veci_sa_bloom_log02032016.csv",100000);
+	//	LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa
+	//			.Load(new String[] { "ACK(SYN)", "SYN-ACK" });
+		LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa
+				.Load(new String[] { "ACK(SYN)", "ACK(FIN(DOLJE))", "ACK(FIN(GORE))", "ACK(PUSH_GORE)", "ACK(PUSH_DOLJE)", "SYN-ACK" });
+		
+		System.out.println("Kolicina prometa =" + cjelokupanPromet.size());
+		try (Writer writer = new BufferedWriter(
+				new OutputStreamWriter(new FileOutputStream(
+						"C:/faks/zavrsni/rezultati/JavaGreske.csv"), "utf-8"))) {
+
+			for (k = 1; k < 8; k++) {
+				LinkedList<String> greske = new LinkedList<String>();
+				for (m = 1; m <= (1<<12); m += 128/*10/* 1000 */) {
+					int greskeSum=0;
+					
+					LinkedList<Integer> popunjenostFiltera = new LinkedList<Integer>();
+					LinkedList<Integer> brojGresaka = new LinkedList<Integer>();
+					// CountBloomFilter<String> bloomFilter = new
+					// CountBloomFilter<String>(
+					// m, n_max, k);
+					CountBloomFilter<String> bloomFilter = new CountBloomFilter<String>(
+							m,Integer.MAX_VALUE, k);
+
+					LinkedList<PrometData> dodanoUBloomFilter = new LinkedList<PrometData>();
+					LinkedList<PrometData> falsePositivePromet = new LinkedList<PrometData>();
+					for (PrometData zahtjev : cjelokupanPromet) {
+						PrometData odgovarajuciZahtjevIzListe = null;
+						if (zahtjev.Vrsta.equals("SYN-ACK")) {
+							// dodaj u filter <SIP, DIP, SP, DP, SEQ, ASEQ>
+							dodanoUBloomFilter.addLast(zahtjev);
+							String x = zahtjev.SourceIP + zahtjev.DestinationIP
+									+ zahtjev.SourcePort
+									+ zahtjev.DestinationPort + zahtjev.SEQ
+									+ zahtjev.ASEQ;
+							//System.out.println("Dodano: " + x);
+							bloomFilter.add(x);
+						} else {
+							// provjeri dali je vec dodoano onda makni iz
+							// filtera
+							// <DIP, SIP, DP, SP, ASEQ−1, SEQ>
+							String x = zahtjev.DestinationIP + zahtjev.SourceIP
+									+ zahtjev.DestinationPort
+									+ zahtjev.SourcePort + (zahtjev.ASEQ - 1)
+									+ zahtjev.SEQ;
+							//System.out.println("Provjeravam: " + x);
+							boolean sadrzanoUBloomFIltru = bloomFilter
+									.contains(x);
+
+							for (PrometData zahtjevIzListe : dodanoUBloomFilter) {
+								if (zahtjevIzListe.SourceIP
+										.equals(zahtjev.DestinationIP)
+										&& zahtjevIzListe.SourcePort
+												.equals(zahtjev.DestinationPort)
+										&& zahtjevIzListe.DestinationIP
+												.equals(zahtjev.SourceIP)
+										&& zahtjevIzListe.DestinationPort
+												.equals(zahtjev.SourcePort)
+										&& zahtjevIzListe.ASEQ == Long
+												.parseLong(zahtjev.SEQ)
+										&& Long
+												.parseLong(zahtjevIzListe.SEQ) == (zahtjev.ASEQ - 1)) {
+									odgovarajuciZahtjevIzListe = zahtjevIzListe;
+									break;
+								}
+							}
+
+							boolean sadrzanoUListiZaProvjeru = odgovarajuciZahtjevIzListe != null;
+
+							if (sadrzanoUBloomFIltru) {
+								bloomFilter.remove(x);
+								if (!sadrzanoUListiZaProvjeru) {
+									falsePositivePromet.addLast(zahtjev);
+									// System.out
+									// .println("Nije bio sadrzan u listi za provjeru"
+									// + x);
+								} else {
+									dodanoUBloomFilter
+											.remove(odgovarajuciZahtjevIzListe);
+								}
+							} else {
+								if (sadrzanoUListiZaProvjeru) {
+									falsePositivePromet.addLast(zahtjev);
+									// System.out
+									// .println("Bio je sadrzan u listi za provjeru a bloom je rekao da nije"
+									// + x);
+									dodanoUBloomFilter
+											.remove(odgovarajuciZahtjevIzListe);
+								}
+							}
+
+						}
+						if (m == BrojNaKojemTestiramPopunjenost) {
+							popunjenostFiltera.addLast(bloomFilter.count());
+							brojGresaka.addLast(falsePositivePromet.size());
+							if(timeUzeto==false)
+								xTime.addLast(zahtjev.Time);
+						}
+					}
+					System.out.println("Broj gresaka ="
+							+ falsePositivePromet.size() + "velicina polja" + m
+							+ "hash funkcija" + k);
+					if (popunjenostFiltera.size() > 0) {
+		//				System.out.println("Dodajem popunjenost za K="+k);
+						popunjenostFilteraZaSveK.addLast(popunjenostFiltera);
+						greskeFilteraZaSveK.addLast(brojGresaka);
+						timeUzeto=true;
+					}
+					greske.addLast(((Double)(((double)falsePositivePromet.size())/loaderMreznogPrometa.GetKolicinaTestnihPodataka())
+							).toString());
+					if(m==1){
+						m=0;
+					}
+				}
+				String kLine = "";
+				for (int i = 0; i < greske.size(); i++) {
+					if (i == greske.size() - 1) {
+						kLine += greske.get(i);
+						break;
+					}
+					kLine += greske.get(i) + ",";
+				}
+				// System.out.println(kLine);
+				writer.write(kLine + "\n");
+			}
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		//vrijeme
+		LinkedList<Long> microsecondsTime = new LinkedList<Long>();
+		String timeLine = "";
+		if(xTime.size()>0){
+			System.out.println("Obrada vremena"+xTime.size());
+			for(int i=0;i<xTime.size();i++){
+				String[] timeRazdjeljeno = xTime.get(i).split(":");
+				Long timeStamp = Long.parseLong(timeRazdjeljeno[3])+Long.parseLong(timeRazdjeljeno[2])*1000000+
+						Long.parseLong(timeRazdjeljeno[1])*100+Long.parseLong(timeRazdjeljeno[0])*60;
+				microsecondsTime.addLast(timeStamp);
+				//System.out.println(timeStamp.toString());
+				if(i==xTime.size()-1){
+					timeLine+=timeStamp.toString();
+				}else{
+					timeLine+=timeStamp.toString()+",";
+				}
+			}
+			try (Writer writer = new BufferedWriter(
+					new OutputStreamWriter(
+							new FileOutputStream(
+									"C:/faks/zavrsni/rezultati/JavaVrijemePodatakaUBloom.csv"),
+							"utf-8"))) {
+			writer.write(timeLine + "\n");
+			}catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+		}
+		
+		//ispis popunjenosti filtera
+		if (popunjenostFilteraZaSveK.size() > 0) {
+			try (Writer writer = new BufferedWriter(
+					new OutputStreamWriter(
+							new FileOutputStream(
+									"C:/faks/zavrsni/rezultati/JavaKolicinaPodatakaUBloom.csv"),
+							"utf-8"))) {
+				int i=0;
+				for (LinkedList<Integer> popunjenostK : popunjenostFilteraZaSveK) {
+					String linija = "";
+					i++;
+					System.out.println("Dodajem popunjenost za K="+i);
+					for (int j = 0; j < popunjenostK.size(); j++) {
+						if (j == popunjenostK.size() - 1) {
+							linija += popunjenostK.get(j).toString();
+
+						} else {
+							linija += popunjenostK.get(j).toString() + ",";
+						}
+					}
+					writer.write(linija + "\n");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		//ispisi greske
+		if (greskeFilteraZaSveK.size() > 0) {
+			try (Writer writer = new BufferedWriter(
+					new OutputStreamWriter(
+							new FileOutputStream(
+									"C:/faks/zavrsni/rezultati/JavaKolicinaGresakaUBloom.csv"),
+							"utf-8"))) {
+				int i=0;
+				for (LinkedList<Integer> greskeK : greskeFilteraZaSveK) {
+					String linija = "";
+					i++;
+					System.out.println("Dodajem greske za K="+i);
+					for (int j = 0; j < greskeK.size(); j++) {
+						if (j == greskeK.size() - 1) {
+							linija += greskeK.get(j).toString();
+
+						} else {
+							linija += greskeK.get(j).toString() + ",";
+						}
+					}
+					writer.write(linija + "\n");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		//nadi intervale gresaka
+		if(greskeFilteraZaSveK.size() > 0){
+			LinkedList<Integer> intervali = new LinkedList<Integer>();
+			long korak = microsecondsTime.getLast()/podjelaNaDijelove;
+			long trazimVrijednost=korak;
+			for (Long takt : microsecondsTime) {
+				if(takt>=trazimVrijednost){
+					intervali.addLast(microsecondsTime.indexOf(takt));
+					trazimVrijednost+=korak;
+				}
+			}
+			try (Writer writer = new BufferedWriter(
+					new OutputStreamWriter(
+							new FileOutputStream(
+									"C:/faks/zavrsni/rezultati/JavaIntervaliGresakaUBloom.csv"),
+							"utf-8"))) {
+				int i=0;
+				for (LinkedList<Integer> greskeK : greskeFilteraZaSveK) {
+					String linija = "";
+					i++;
+					System.out.println("Dodajem interval greske za K="+i);
+					for(int j=0;j<intervali.size();j++){
+						if(j==0){
+							linija+=greskeK.get(intervali.get(j))+",";
+						}
+						if(j==intervali.size()-1){
+							linija+=(greskeK.get(intervali.get(j))-greskeK.get(intervali.get(j-1)));
+						}else{
+							linija+=(greskeK.get(intervali.get(j))-greskeK.get(intervali.get(j-1)))+",";
+						}
+					}
+					writer.write(linija + "\n");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
+}

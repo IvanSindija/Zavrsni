@@ -1,0 +1,9 @@
+package Loader;
+
+import java.util.LinkedList;
+
+public interface ILoader {
+	public int GetKOlicinaTestnihPodataka();
+
+	public LinkedList<PrometData> Load(String[] onlyLoad);
+}

@@ -1,0 +1,52 @@
+package Loader;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.LinkedList;
+
+public class CsvLoader implements ILoader {
+
+	String fileName;
+	
+	public CsvLoader(String fileName) {
+		this.fileName = System.getProperty("user.dir") + fileName;
+		System.out.println(this.fileName);
+	}
+	@Override
+	public LinkedList<PrometData> Load(String[] onlyLoad) {
+		LinkedList<PrometData> promet = new LinkedList<PrometData>();
+		
+		try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+		    String line;
+		    while ((line = br.readLine()) != null) {
+		    	String[] parsedLine = line.split(",");
+		    	PrometData linijaPrometa = new PrometData();
+		    	//System.out.print(parsedLine[0]);
+		    	//System.out.print(parsedLine[1]);
+		    	//System.out.print(parsedLine[2]);
+		    	//System.out.print(parsedLine[3]);
+		    	//System.out.print(parsedLine[4]);
+		    	//System.out.print(parsedLine[5]);
+		    	//System.out.print(parsedLine[6]);
+		    	//System.out.print("\n");
+		    	linijaPrometa.Vrsta=parsedLine[0];
+		    	linijaPrometa.SEQ=parsedLine[1];
+		    	linijaPrometa.ASEQ=Integer.parseInt(parsedLine[2]);
+		    	linijaPrometa.SourceIP=parsedLine[3];
+		    	linijaPrometa.SourcePort=parsedLine[4];
+		    	linijaPrometa.DestinationIP=parsedLine[5];
+		    	linijaPrometa.DestinationPort=parsedLine[6];
+		    	promet.addLast(linijaPrometa);
+		    }
+		} catch ( IOException e) {
+			e.printStackTrace();
+		}
+		return promet;
+	}
+	@Override
+	public int GetKolicinaTestnihPodataka() {
+		return 0;
+	}
+
+}

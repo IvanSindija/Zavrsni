@@ -1,0 +1,50 @@
+package Loader;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.LinkedList;
+
+public class CsvLoader implements ILoader {
+
+	String fileName;
+	int KolicinaTestnihPodataka;
+	public CsvLoader(String fileName) {
+		this.fileName = System.getProperty("user.dir") + fileName;
+		System.out.println(this.fileName);
+	}
+	@Override
+	public LinkedList<PrometData> Load(String[] onlyLoad) {
+		LinkedList<PrometData> promet = new LinkedList<PrometData>();
+		
+		try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+		    String line;
+		    int i=0;
+		    while ((line = br.readLine()) != null) {
+		    	String[] parsedLine = line.split(",");
+		    	PrometData linijaPrometa = new PrometData();
+		    	linijaPrometa.Time=i;
+		    	linijaPrometa.Vrsta=parsedLine[0];
+		    	linijaPrometa.SEQ=parsedLine[1];
+		    	linijaPrometa.ASEQ=Integer.parseInt(parsedLine[2]);
+		    	linijaPrometa.SourceIP=parsedLine[3];
+		    	linijaPrometa.SourcePort=parsedLine[4];
+		    	linijaPrometa.DestinationIP=parsedLine[5];
+		    	linijaPrometa.DestinationPort=parsedLine[6];
+		    	promet.addLast(linijaPrometa);
+		    	i++;
+		    	if(!linijaPrometa.Vrsta.equals("SYN-ACK")){
+					KolicinaTestnihPodataka++;
+				}
+		    }
+		} catch ( IOException e) {
+			e.printStackTrace();
+		}
+		return promet;
+	}
+	@Override
+	public int GetKolicinaTestnihPodataka() {
+		return 0;
+	}
+
+}
