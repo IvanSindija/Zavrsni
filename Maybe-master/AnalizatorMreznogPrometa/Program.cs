@@ -21,13 +21,13 @@ namespace AnalizatorMreznogPrometa
 
             LinkedList<string> xTime = new LinkedList<string>();
             bool timeUzeto = false;
-            ILoader loaderMreznogPrometa = new TvzCSVLoader("/promet_veci_sa_bloom_log02032016.csv",120000);
+            ILoader loaderMreznogPrometa = new TvzCSVLoader("/promet_veci_sa_bloom_log02032016.csv",Int32.MaxValue);
             LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa.Load(new string[] { "ACK(SYN)", "ACK(FIN(DOLJE))", "ACK(FIN(GORE))", "ACK(PUSH_GORE)", "ACK(PUSH_DOLJE)", "SYN-ACK" });
             //ILoader loaderMreznogPrometa = new CsvLoader("/promet.csv");
           //  LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa.Load(new string[] { "ACK(SYN)", "SYN-ACK" });
 
             Console.WriteLine("Kolicina prometa =" + cjelokupanPromet.Count);
-            int VelicinaPoljaZaDodatneTestove = 1 << 10;
+            int VelicinaPoljaZaDodatneTestove = 1 << 11;
             using (System.IO.StreamWriter file = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/cSharpMurmurGreske.csv"))
             {
                 for (int numHashes = 1; numHashes < 8; numHashes++)
@@ -134,8 +134,6 @@ namespace AnalizatorMreznogPrometa
                         }
                         else
                         {
-                            NumberFormatInfo nfi = new NumberFormatInfo();
-                            nfi.NumberDecimalSeparator = ".";
                             brojGresaka.AddLast(((double)falsePromet.Count) / loaderMreznogPrometa.KolicinaTestnogPrometa);
 
                             if (kolicinaCalnova.Count > 0)
@@ -254,17 +252,38 @@ namespace AnalizatorMreznogPrometa
             if (sveGreske.Count > 0)
             {
                 LinkedList<Int32> intervali = new LinkedList<Int32>();
+                LinkedList<Int64> taktIntervala = new LinkedList<Int64>();
                 long korak = microsecondsTime.Last.Value / brojIntervala;
                 long trazimVrijednost = korak;
+                Console.WriteLine("Korak je" + korak+"last="+ microsecondsTime.Last.Value+"broj intervala"+brojIntervala);
                 //trazim koji je zadnji indeks zahtjeva na kraju vremenskog intervala 
                 foreach (Int64 takt in microsecondsTime)
                 {
                     if (takt >= trazimVrijednost)
                     {
                         intervali.AddLast(microsecondsTime.Select((item, inx) => new { item, inx }).First(x=>x.item==takt).inx);
+                        taktIntervala.AddLast(takt);
                         trazimVrijednost += korak;
                     }
                 }
+                string linijaTaktovaIntervala = "";
+                for(int i = 0; i < taktIntervala.Count; i++)
+                {
+                    if (i == taktIntervala.Count - 1)
+                    {
+                        linijaTaktovaIntervala += taktIntervala.ElementAt(i);
+                    }
+                    else
+                    {
+                        linijaTaktovaIntervala += taktIntervala.ElementAt(i)+",";
+                    }
+                }
+                using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/murmurVremenaIntervaliGresaka.csv"))
+                {
+                    pisac.WriteLine(linijaTaktovaIntervala);
+                }
+
+                Console.WriteLine("Broj intervala" + intervali.Count);
                 using (var pisac = new System.IO.StreamWriter("C:/faks/zavrsni/rezultati/murmurIntervaliGresaka.csv"))
                 {   
                     int i = 0;
@@ -305,17 +324,17 @@ namespace AnalizatorMreznogPrometa
                         {
                             if (j == 0)
                             {
-                                linija += ((double)greskeK.ElementAt(intervali.ElementAt(j)) / intervali.ElementAt(j)) + ",";
+                                linija += ((Double)greskeK.ElementAt(intervali.ElementAt(j)) / intervali.ElementAt(j)).ToString().Replace(",", ".") + ",";
                             }
                             else if (j == intervali.Count - 1)
                             {
-                                linija += ((double)(greskeK.ElementAt(intervali.ElementAt(j)) - greskeK.ElementAt(intervali.ElementAt(j - 1))) 
-                                    / (intervali.ElementAt(j) - intervali.ElementAt(j - 1)));
+                                linija += ((Double)(greskeK.ElementAt(intervali.ElementAt(j)) - greskeK.ElementAt(intervali.ElementAt(j - 1))) 
+                                    / (intervali.ElementAt(j) - intervali.ElementAt(j - 1))).ToString().Replace(",", ".");
                             }
                             else
                             {
-                                linija += ((double)(greskeK.ElementAt(intervali.ElementAt(j)) - greskeK.ElementAt(intervali.ElementAt(j - 1)))
-                                    / (intervali.ElementAt(j) - intervali.ElementAt(j - 1))) + ",";
+                                linija += ((Double)(greskeK.ElementAt(intervali.ElementAt(j)) - greskeK.ElementAt(intervali.ElementAt(j - 1)))
+                                    / (intervali.ElementAt(j) - intervali.ElementAt(j - 1))).ToString().Replace(",", ".") + ",";
                             }
                         }
                         pisac.WriteLine(linija);

@@ -1,9 +1,11 @@
 package main;
 
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.util.LinkedList;
 
@@ -16,7 +18,7 @@ import Loader.TvzCSVLoader;
 public class Main {
 
 	public static void main(String[] args) {
-		int BrojNaKojemTestiramPopunjenost = 1<<10;
+		int BrojNaKojemTestiramPopunjenost = 1<<11;
 		System.out.println("BrojNaKojemTestiramPopunjenost="+BrojNaKojemTestiramPopunjenost);
 		int podjelaNaDijelove=60;
 		int m = 100;// Integer.parseInt(args[0]);
@@ -28,7 +30,7 @@ public class Main {
 		//SL1
 		//ILoader loaderMreznogPrometa = new CsvLoader("/promet.csv");
 		//TVZ1
-		ILoader loaderMreznogPrometa = new TvzCSVLoader("/promet_veci_sa_bloom_log02032016.csv",120000);
+		ILoader loaderMreznogPrometa = new TvzCSVLoader("/promet_veci_sa_bloom_log02032016.csv",Integer.MAX_VALUE);
 	//	LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa
 	//			.Load(new String[] { "ACK(SYN)", "SYN-ACK" });
 		LinkedList<PrometData> cjelokupanPromet = loaderMreznogPrometa
@@ -243,14 +245,45 @@ public class Main {
 			LinkedList<Integer> intervali = new LinkedList<Integer>();
 			long korak = microsecondsTime.getLast()/podjelaNaDijelove;
 			long trazimVrijednost=korak;
+			LinkedList<Long> taktIntervala = new LinkedList<Long>();
 			System.out.println("korak"+korak);
 			//trazim koji je zadnji indeks zahtjeva na kraju vremenskog intervala 
 			for (Long takt : microsecondsTime) {
 				if(takt>=trazimVrijednost){
 					intervali.addLast(microsecondsTime.indexOf(takt));
+					taktIntervala.addLast(takt);
 					trazimVrijednost+=korak;
 				}
 			}
+			
+			String linijaTaktovaIntervala = "";
+            for(int i = 0; i < taktIntervala.size(); i++)
+            {
+                if (i == taktIntervala.size() - 1)
+                {
+                    linijaTaktovaIntervala += taktIntervala.get(i);
+                }
+                else
+                {
+                    linijaTaktovaIntervala += taktIntervala.get(i)+",";
+                }
+            }
+            
+            try (Writer writer = new BufferedWriter(
+					new OutputStreamWriter(
+							new FileOutputStream(
+									"C:/faks/zavrsni/rezultati/JavaVremenaIntervalaGresakaUBloom.csv"),
+							"utf-8"))) {
+            	
+            	writer.write(linijaTaktovaIntervala+"\n");
+            } catch (UnsupportedEncodingException e1) {
+				e1.printStackTrace();
+			} catch (FileNotFoundException e1) {
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			};
+            
 			try (Writer writer = new BufferedWriter(
 					new OutputStreamWriter(
 							new FileOutputStream(

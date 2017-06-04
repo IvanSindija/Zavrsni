@@ -33,6 +33,7 @@ namespace DataLoader
                     {
                         break;
                     }
+                    brojac++;
                     string[] line = sr.ReadLine().Split(';');
 
                     if (olnyLoad.Contains(line[8]))
